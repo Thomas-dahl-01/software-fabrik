@@ -1,0 +1,17 @@
+# Hemmeligheder
+.env
+*.env
+!.env.example
+
+# Runnerens arbejdsmappe, tilstand og logfiler
+runner/arbejde/
+runner/tilstand.json
+runner/logs/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.db

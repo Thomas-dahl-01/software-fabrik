@@ -1,0 +1,609 @@
+{
+  "name": "Fabrik 1 · Forfin opgave",
+  "nodes": [
+    {
+      "id": "e9d01d15-81ae-5955-a39d-fe2ad5417bee",
+      "name": "Beskrivelse",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -320
+      ],
+      "parameters": {
+        "content": "## 1 · Forfin opgave\n**Idé → Forfines → Klar til godkendelse**\n\nØverst: AI-trinnet omskriver den grove opgave efter skabelonen og stiller spørgsmål.\nKommenterer du på en opgave i *Klar til godkendelse*, forfines den igen.\n\nNederst: svarer du på agentens spørgsmål (*Venter på dig*), flyttes opgaven til *Godkendt*.\n\nAI'en rådgiver, den godkender aldrig.",
+        "width": 560,
+        "height": 260
+      }
+    },
+    {
+      "id": "badcd26b-20fe-5cb0-9c9e-eaa52db406b9",
+      "name": "Hvert minut",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c0f52ea3-5362-52d0-90b4-9be0021c257d",
+      "name": "Kør manuelt",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "8534acb2-acdd-5718-9613-2ed0a933d57a",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        100
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa3e74c1-9bf1-5ff5-b763-1a709ccce1d6",
+              "name": "ejer",
+              "value": "Thomas-dahl-01",
+              "type": "string"
+            },
+            {
+              "id": "9b5b602a-7fd2-51d8-96dc-01db8b66e7a0",
+              "name": "repo",
+              "value": "software-fabrik",
+              "type": "string"
+            },
+            {
+              "id": "d7f9c535-c5ca-54f0-a653-152c6593c22d",
+              "name": "forfatter",
+              "value": "Thomas-dahl-01",
+              "type": "string"
+            },
+            {
+              "id": "c607a79d-5ce3-571e-9fed-e1b4ca420fde",
+              "name": "ollama_url",
+              "value": "http://host.docker.internal:11434",
+              "type": "string"
+            },
+            {
+              "id": "512cbf22-a9a7-57ba-a2cd-5201a5ef03b3",
+              "name": "model",
+              "value": "gemma4:31b-cloud",
+              "type": "string"
+            },
+            {
+              "id": "cab6805f-9140-5696-8b81-ec66026cb7da",
+              "name": "repo_kontekst",
+              "value": "Ét repo med to dele: (1) fabrikken selv: n8n-workflows som JSON i n8n/workflows/ (genereres af scripts/byg_workflows.py) og runneren i runner/ (Python, kun standardbiblioteket). (2) Produktet i produkt/: en personlig finance tracker i Python 3.12+ med SQLite (standardbiblioteket) og pytest til tests. Opgaver om produktet må kun ændre filer i produkt/. Kør tests med: python -m pytest produkt",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ac6e728c-887b-5387-bd1f-f17028c3d13e",
+      "name": "Hent åbne issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "open"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "sort",
+              "value": "created"
+            },
+            {
+              "name": "direction",
+              "value": "asc"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "87fedc33-c86a-5784-939c-78f93d12fb61",
+      "name": "Hent seneste kommentarer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "sort",
+              "value": "created"
+            },
+            {
+              "name": "direction",
+              "value": "desc"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "8c8a1eeb-777b-597f-8b49-95b1f9205edd",
+      "name": "Vælg opgave til forfining",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const TILSTANDE = ['Idé', 'Forfines', 'Klar til godkendelse', 'Godkendt', 'Bygges',\n                   'Venter på dig', 'Sidder fast', 'Din QA', 'Færdig'];\nconst K = $('Konfiguration').first().json;\nconst navne = (issue) => (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);\nconst tilstandAf = (issue) => navne(issue).find(n => TILSTANDE.includes(n)) || null;\nconst labelsMed = (issue, ny) => (issue ? navne(issue) : []).filter(n => !TILSTANDE.includes(n)).concat([ny]);\nconst erFabrik = (k) => (k.body || '').includes('<!-- fabrik');\nconst issueNr = (url) => Number(String(url).split('/').pop());\nconst renser = (t) => (t || '').replace(/<!--[\\s\\S]*?-->/g, '').trim();\nconst mine = (liste) => liste.map(i => i.json).filter(i => i.number && !i.pull_request &&\n  (i.user?.login || '').toLowerCase() === String(K.forfatter).toLowerCase());\n\nconst issues = mine($('Hent åbne issues').all());\nconst seneste = {};\nfor (const k of $('Hent seneste kommentarer').all().map(i => i.json).filter(k => k.id)) {\n  const n = issueNr(k.issue_url);\n  if (!seneste[n] || k.created_at > seneste[n].created_at) seneste[n] = k;\n}\nconst tiMinSiden = new Date(Date.now() - 10 * 60 * 1000).toISOString();\nconst kandidater = issues.filter(i => {\n  const t = tilstandAf(i), s = seneste[i.number];\n  if (t === 'Idé') return true;                                   // ny grov opgave\n  if (t === 'Klar til godkendelse') return s && !erFabrik(s);     // du har kommenteret -> forfin igen\n  if (t === 'Forfines') return i.updated_at < tiMinSiden;         // hang fra en afbrudt kørsel\n  return false;\n});\n// Én opgave pr. kørsel, så AI-kald ikke overlapper.\nreturn kandidater.slice(0, 1).map(i => ({ json: {\n  number: i.number,\n  labels_forfines: labelsMed(i, 'Forfines'),\n  labels_klar: labelsMed(i, 'Klar til godkendelse'),\n}}));"
+      }
+    },
+    {
+      "id": "31b3a8aa-8788-59a5-bc78-b455b759d2d4",
+      "name": "Sæt Forfines",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Vælg opgave til forfining').first().json.number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ labels: $('Vælg opgave til forfining').first().json.labels_forfines }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "c51cdcf5-50d0-5e84-acf4-0c12e8e8d81a",
+      "name": "Hent issue-kommentarer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Vælg opgave til forfining').first().json.number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "alwaysOutputData": true,
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "81e1f503-a087-593a-8bd4-0da30e3c208b",
+      "name": "Byg prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const TILSTANDE = ['Idé', 'Forfines', 'Klar til godkendelse', 'Godkendt', 'Bygges',\n                   'Venter på dig', 'Sidder fast', 'Din QA', 'Færdig'];\nconst K = $('Konfiguration').first().json;\nconst navne = (issue) => (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);\nconst tilstandAf = (issue) => navne(issue).find(n => TILSTANDE.includes(n)) || null;\nconst labelsMed = (issue, ny) => (issue ? navne(issue) : []).filter(n => !TILSTANDE.includes(n)).concat([ny]);\nconst erFabrik = (k) => (k.body || '').includes('<!-- fabrik');\nconst issueNr = (url) => Number(String(url).split('/').pop());\nconst renser = (t) => (t || '').replace(/<!--[\\s\\S]*?-->/g, '').trim();\nconst mine = (liste) => liste.map(i => i.json).filter(i => i.number && !i.pull_request &&\n  (i.user?.login || '').toLowerCase() === String(K.forfatter).toLowerCase());\n\nconst PROMPT = \"Du er opgave-forfiner i en lille softwarefabrik. Din opgave er at omskrive en grov idé fra udvikleren til en klar, afgrænset opgave, som en kodeagent kan bygge uden at gætte.\\n\\nDu rådgiver. Du godkender aldrig. Udvikleren beslutter selv, om opgaven er klar.\\n\\n## Repoet\\n{{REPO_KONTEKST}}\\n\\n## Sådan arbejder du\\n1. Læs titlen, den grove beskrivelse og hele samtalen. Nyeste kommentarer fra udvikleren vejer tungest: de er svar på dine tidligere spørgsmål eller rettelser til din tidligere version.\\n2. Udfyld skabelonen nedenfor. Skriv på dansk, kort og konkret.\\n3. Gæt ikke på ting, der ændrer resultatet. Skriv dem som spørgsmål. Små, sikre valg skriver du som antagelser, så udvikleren kan se og rette dem.\\n4. Hold opgaven lille: den skal kunne bygges af en kodeagent på under 30 minutter. Er den for stor, så foreslå i \\\"anbefaling\\\", hvordan den deles op, og beskriv kun første del.\\n5. Hvert acceptkriterium skal kunne tjekkes af en test eller af udvikleren på under ét minut. Skriv dem som \\\"Givet ... når ... så ...\\\", når det giver mening. Undgå ord som \\\"pænt\\\", \\\"hurtigt\\\" og \\\"brugervenligt\\\" uden en målbar betydning.\\n6. Opfind ikke nye teknologier eller afhængigheder. Brug det, repoet allerede bruger, medmindre udvikleren beder om andet.\\n\\n## Svarformat\\nSvar KUN med ét JSON-objekt med præcis disse felter (ingen tekst før eller efter):\\n\\n{\\n  \\\"titel\\\": \\\"kort titel i bydeform, max 70 tegn\\\",\\n  \\\"maal\\\": \\\"hvad skal bygges, 1-3 sætninger\\\",\\n  \\\"hvorfor\\\": \\\"hvilket problem det løser for brugeren, 1-2 sætninger\\\",\\n  \\\"omfang\\\": [\\\"konkrete ting der SKAL laves\\\"],\\n  \\\"uden_for_omfang\\\": [\\\"ting agenten IKKE skal lave i denne opgave\\\"],\\n  \\\"begraensninger\\\": [\\\"tekniske rammer: sprog, mapper, afhængigheder, filer der ikke må røres\\\"],\\n  \\\"acceptkriterier\\\": [\\\"testbare kriterier\\\"],\\n  \\\"tests\\\": [\\\"hvilke automatiske tests agenten skal skrive og køre\\\"],\\n  \\\"omraade\\\": [\\\"mapper eller filer i repoet, opgaven forventes at ændre\\\"],\\n  \\\"antagelser\\\": [\\\"små valg du har truffet, som udvikleren kan rette\\\"],\\n  \\\"spoergsmaal\\\": [\\\"spørgsmål der skal besvares før opgaven bygges; tom liste hvis ingen\\\"],\\n  \\\"vurdering\\\": {\\n    \\\"stoerrelse\\\": \\\"S, M eller L\\\",\\n    \\\"risiko\\\": \\\"lav, middel eller hoej\\\",\\n    \\\"anbefaling\\\": \\\"din korte råd: er opgaven klar til godkendelse, mangler den svar, eller bør den deles op?\\\"\\n  }\\n}\\n\";\nconst valgt = $('Vælg opgave til forfining').first().json;\nconst issue = $('Hent åbne issues').all().map(i => i.json).find(i => i.number === valgt.number);\nconst kommentarer = $('Hent issue-kommentarer').all().map(i => i.json).filter(k => k.id);\nconst samtale = kommentarer.map(k =>\n  `### ${erFabrik(k) ? 'Fabrikken (din tidligere version eller agentens spørgsmål)' : 'Udvikleren'} – ${k.created_at}\\n${renser(k.body)}`\n).join('\\n\\n');\nconst system = PROMPT.replace('{{REPO_KONTEKST}}', K.repo_kontekst);\nconst bruger = [\n  `# Issue #${issue.number}: ${issue.title}`, '',\n  '## Udviklerens grove beskrivelse', issue.body || '(ingen beskrivelse)', '',\n  '## Samtale indtil nu', samtale || '(ingen kommentarer endnu)', '',\n  'Skriv nu den forfinede opgave som ét JSON-objekt.',\n].join('\\n');\nreturn [{ json: { number: issue.number, messages: [\n  { role: 'system', content: system },\n  { role: 'user', content: bruger },\n]}}];"
+      }
+    },
+    {
+      "id": "51e46b31-09d0-5c31-b653-2a162c48ed3e",
+      "name": "AI-trin (Ollama)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.ollama_url }}/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $('Konfiguration').first().json.model, messages: $json.messages, stream: false, format: 'json', options: { temperature: 0.2 } }) }}",
+        "options": {
+          "timeout": 600000
+        }
+      }
+    },
+    {
+      "id": "4272f03e-ed1a-54ee-a665-4786cd106fc1",
+      "name": "Formater kommentar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const TILSTANDE = ['Idé', 'Forfines', 'Klar til godkendelse', 'Godkendt', 'Bygges',\n                   'Venter på dig', 'Sidder fast', 'Din QA', 'Færdig'];\nconst K = $('Konfiguration').first().json;\nconst navne = (issue) => (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);\nconst tilstandAf = (issue) => navne(issue).find(n => TILSTANDE.includes(n)) || null;\nconst labelsMed = (issue, ny) => (issue ? navne(issue) : []).filter(n => !TILSTANDE.includes(n)).concat([ny]);\nconst erFabrik = (k) => (k.body || '').includes('<!-- fabrik');\nconst issueNr = (url) => Number(String(url).split('/').pop());\nconst renser = (t) => (t || '').replace(/<!--[\\s\\S]*?-->/g, '').trim();\nconst mine = (liste) => liste.map(i => i.json).filter(i => i.number && !i.pull_request &&\n  (i.user?.login || '').toLowerCase() === String(K.forfatter).toLowerCase());\n\nconst valgt = $('Vælg opgave til forfining').first().json;\nconst raa = $json.message?.content ?? '';\nlet s = null;\ntry { s = JSON.parse(raa.replace(/^\\s*```(json)?/, '').replace(/```\\s*$/, '').trim()); } catch (e) {}\nconst liste = (a) => (Array.isArray(a) && a.length) ? a.map(x => `- ${x}`).join('\\n') : '- (ingen)';\nconst tjek = (a) => (Array.isArray(a) && a.length) ? a.map(x => `- [ ] ${x}`).join('\\n') : '- (ingen)';\nlet krop;\nif (!s) {\n  krop = `<!-- fabrik:spec-fejl -->\\n⚠️ AI-trinnet returnerede ikke gyldig JSON. Skriv en kommentar for at prøve igen.\\n\\n<details><summary>Rå svar</summary>\\n\\n${raa}\\n</details>`;\n} else {\n  const v = s.vurdering || {};\n  krop = [\n    '<!-- fabrik:spec -->',\n    `## 🤖 Forfinet opgave: ${s.titel}`, '',\n    '### Mål', s.maal, '',\n    '### Hvorfor', s.hvorfor, '',\n    '### Omfang', liste(s.omfang), '',\n    '### Uden for omfang', liste(s.uden_for_omfang), '',\n    '### Begrænsninger', liste(s.begraensninger), '',\n    '### Acceptkriterier', tjek(s.acceptkriterier), '',\n    '### Tests', liste(s.tests), '',\n    '### Område i repoet', liste(s.omraade), '',\n    '### Antagelser', liste(s.antagelser), '',\n    '---',\n    '### ❓ Spørgsmål til dig', liste(s.spoergsmaal), '',\n    '### 💡 AI\\'ens vurdering', `**Størrelse:** ${v.stoerrelse ?? '?'} · **Risiko:** ${v.risiko ?? '?'}`, '',\n    v.anbefaling ?? '', '',\n    '---',\n    '_Svar eller ret i en kommentar, så forfiner jeg igen. Når du er tilfreds, flytter du selv opgaven til **Godkendt**._',\n  ].join('\\n');\n}\nreturn [{ json: { number: valgt.number, body: krop, labels: valgt.labels_klar } }];"
+      }
+    },
+    {
+      "id": "7327da80-dc0f-53cf-8115-015d8b17b82c",
+      "name": "Skriv forfinet opgave",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Formater kommentar').first().json.number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $('Formater kommentar').first().json.body }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "c6f08dae-5443-5f76-b17e-a8a4510c79eb",
+      "name": "Sæt Klar til godkendelse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        0
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Formater kommentar').first().json.number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ labels: $('Formater kommentar').first().json.labels }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "c42e91a0-3513-560c-bca1-fd16a8516b7d",
+      "name": "Find besvarede spørgsmål",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const TILSTANDE = ['Idé', 'Forfines', 'Klar til godkendelse', 'Godkendt', 'Bygges',\n                   'Venter på dig', 'Sidder fast', 'Din QA', 'Færdig'];\nconst K = $('Konfiguration').first().json;\nconst navne = (issue) => (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);\nconst tilstandAf = (issue) => navne(issue).find(n => TILSTANDE.includes(n)) || null;\nconst labelsMed = (issue, ny) => (issue ? navne(issue) : []).filter(n => !TILSTANDE.includes(n)).concat([ny]);\nconst erFabrik = (k) => (k.body || '').includes('<!-- fabrik');\nconst issueNr = (url) => Number(String(url).split('/').pop());\nconst renser = (t) => (t || '').replace(/<!--[\\s\\S]*?-->/g, '').trim();\nconst mine = (liste) => liste.map(i => i.json).filter(i => i.number && !i.pull_request &&\n  (i.user?.login || '').toLowerCase() === String(K.forfatter).toLowerCase());\n\nconst issues = mine($('Hent åbne issues').all());\nconst seneste = {};\nfor (const k of $('Hent seneste kommentarer').all().map(i => i.json).filter(k => k.id)) {\n  const n = issueNr(k.issue_url);\n  if (!seneste[n] || k.created_at > seneste[n].created_at) seneste[n] = k;\n}\n// Agenten spurgte, og den nyeste kommentar er din -> tilbage til Godkendt.\nreturn issues\n  .filter(i => tilstandAf(i) === 'Venter på dig' && seneste[i.number] && !erFabrik(seneste[i.number]))\n  .map(i => ({ json: { number: i.number, labels: labelsMed(i, 'Godkendt') } }));"
+      }
+    },
+    {
+      "id": "758d7d33-ae02-5da9-a6ec-f53006e82f48",
+      "name": "Sæt Godkendt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        260
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $json.number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ labels: $json.labels }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "7384e89b-c3ce-5352-8673-53152b1a8c44",
+      "name": "Kvittér for svar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        260
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $json.number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: '<!-- fabrik:svar-modtaget -->\\n↩️ Svar modtaget. Opgaven er flyttet tilbage til **Godkendt** og bygges igen med dit svar, når fabrikken har plads.' }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Hvert minut": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kør manuelt": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Hent åbne issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hent åbne issues": {
+      "main": [
+        [
+          {
+            "node": "Hent seneste kommentarer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hent seneste kommentarer": {
+      "main": [
+        [
+          {
+            "node": "Vælg opgave til forfining",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Find besvarede spørgsmål",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vælg opgave til forfining": {
+      "main": [
+        [
+          {
+            "node": "Sæt Forfines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sæt Forfines": {
+      "main": [
+        [
+          {
+            "node": "Hent issue-kommentarer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hent issue-kommentarer": {
+      "main": [
+        [
+          {
+            "node": "Byg prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Byg prompt": {
+      "main": [
+        [
+          {
+            "node": "AI-trin (Ollama)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI-trin (Ollama)": {
+      "main": [
+        [
+          {
+            "node": "Formater kommentar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formater kommentar": {
+      "main": [
+        [
+          {
+            "node": "Skriv forfinet opgave",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skriv forfinet opgave": {
+      "main": [
+        [
+          {
+            "node": "Sæt Klar til godkendelse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find besvarede spørgsmål": {
+      "main": [
+        [
+          {
+            "node": "Sæt Godkendt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sæt Godkendt": {
+      "main": [
+        [
+          {
+            "node": "Kvittér for svar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

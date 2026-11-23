@@ -1,0 +1,335 @@
+{
+  "name": "Fabrik 4 · Følg pull requests",
+  "nodes": [
+    {
+      "id": "e872fa66-34c9-5447-961a-41446944a25b",
+      "name": "Beskrivelse",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -340
+      ],
+      "parameters": {
+        "content": "## 4 · Følg pull requests\n**Bygges → Din QA → Færdig**\n\nBranches hedder *issue-N*, så en pull request kan kobles til sin opgave.\n- PR merget → *Færdig* og issuet lukkes\n- PR lukket uden merge (mens opgaven er i Din QA) → droppet, *Færdig*\n- PR åbnet af dig selv (basic A) → *Din QA*\n- Issue lukket → *Færdig*\n\nSend tilbage: flyt issuet til *Godkendt* og skriv en kommentar på issuet. PR'en forbliver åben.",
+        "width": 600,
+        "height": 300
+      }
+    },
+    {
+      "id": "badcd26b-20fe-5cb0-9c9e-eaa52db406b9",
+      "name": "Hvert minut",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c0f52ea3-5362-52d0-90b4-9be0021c257d",
+      "name": "Kør manuelt",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "8534acb2-acdd-5718-9613-2ed0a933d57a",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        100
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa3e74c1-9bf1-5ff5-b763-1a709ccce1d6",
+              "name": "ejer",
+              "value": "Thomas-dahl-01",
+              "type": "string"
+            },
+            {
+              "id": "9b5b602a-7fd2-51d8-96dc-01db8b66e7a0",
+              "name": "repo",
+              "value": "software-fabrik",
+              "type": "string"
+            },
+            {
+              "id": "d7f9c535-c5ca-54f0-a653-152c6593c22d",
+              "name": "forfatter",
+              "value": "Thomas-dahl-01",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7de4b2ab-e861-5cbf-a6ea-5a4af197fa3c",
+      "name": "Hent pull requests",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/pulls",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "all"
+            },
+            {
+              "name": "sort",
+              "value": "updated"
+            },
+            {
+              "name": "direction",
+              "value": "desc"
+            },
+            {
+              "name": "per_page",
+              "value": "50"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "ca7823d8-1806-5f9d-a34a-4f9316d5e3c9",
+      "name": "Hent alle issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "all"
+            },
+            {
+              "name": "sort",
+              "value": "updated"
+            },
+            {
+              "name": "direction",
+              "value": "desc"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "7cb35e8f-d332-55bb-bdc4-4e45cc38a147",
+      "name": "Find ændringer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        100
+      ],
+      "parameters": {
+        "jsCode": "const TILSTANDE = ['Idé', 'Forfines', 'Klar til godkendelse', 'Godkendt', 'Bygges',\n                   'Venter på dig', 'Sidder fast', 'Din QA', 'Færdig'];\nconst K = $('Konfiguration').first().json;\nconst navne = (issue) => (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);\nconst tilstandAf = (issue) => navne(issue).find(n => TILSTANDE.includes(n)) || null;\nconst labelsMed = (issue, ny) => (issue ? navne(issue) : []).filter(n => !TILSTANDE.includes(n)).concat([ny]);\nconst erFabrik = (k) => (k.body || '').includes('<!-- fabrik');\nconst issueNr = (url) => Number(String(url).split('/').pop());\nconst renser = (t) => (t || '').replace(/<!--[\\s\\S]*?-->/g, '').trim();\nconst mine = (liste) => liste.map(i => i.json).filter(i => i.number && !i.pull_request &&\n  (i.user?.login || '').toLowerCase() === String(K.forfatter).toLowerCase());\n\nconst prs = $('Hent pull requests').all().map(i => i.json).filter(p => p.number);\nconst issues = $('Hent alle issues').all().map(i => i.json).filter(i => i.number && !i.pull_request);\nconst efterNr = Object.fromEntries(issues.map(i => [i.number, i]));\nconst handlinger = {};\nconst set = new Set();\nfor (const p of prs) {                       // nyeste først: kun den nyeste PR pr. issue tæller\n  const m = /^issue-(\\d+)$/.exec(p.head?.ref || '');\n  if (!m || set.has(Number(m[1]))) continue;\n  set.add(Number(m[1]));\n  const i = efterNr[Number(m[1])];\n  if (!i) continue;\n  const t = tilstandAf(i);\n  if (p.merged_at) {\n    if (t !== 'Færdig' || i.state === 'open')\n      handlinger[i.number] = { i, ny: 'Færdig', luk: true, grund: 'completed',\n        kommentar: `🎉 Pull request #${p.number} er merget. Opgaven er **Færdig**.` };\n  } else if (p.state === 'closed') {\n    if (t === 'Din QA')\n      handlinger[i.number] = { i, ny: 'Færdig', luk: true, grund: 'not_planned',\n        kommentar: `🗑️ Pull request #${p.number} blev lukket uden merge. Opgaven er droppet og markeret **Færdig**.` };\n  } else if (t === 'Bygges' && !(p.body || '').includes('<!-- fabrik:pr')) {\n    // Basic A: du (eller agenten i din session) har selv åbnet pull requesten.\n    handlinger[i.number] = { i, ny: 'Din QA', luk: false,\n      kommentar: `🔍 Pull request #${p.number} er åbnet. Opgaven er flyttet til **Din QA**.` };\n  }\n}\nfor (const i of issues) {\n  const t = tilstandAf(i);\n  if (i.state === 'closed' && t && t !== 'Færdig' && !handlinger[i.number])\n    handlinger[i.number] = { i, ny: 'Færdig', luk: false, kommentar: '📦 Issuet er lukket. Opgaven er markeret **Færdig**.' };\n}\nreturn Object.values(handlinger).map(h => ({ json: {\n  number: h.i.number, labels: labelsMed(h.i, h.ny),\n  patch: h.luk && h.i.state === 'open'\n    ? { labels: labelsMed(h.i, h.ny), state: 'closed', state_reason: h.grund }\n    : { labels: labelsMed(h.i, h.ny) },\n  kommentar: '<!-- fabrik:pr-status -->\\n' + h.kommentar,\n}}));"
+      }
+    },
+    {
+      "id": "590baa4a-b7ca-5d68-acad-3c9fcaa7aa30",
+      "name": "Opdatér issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        100
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $json.number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.patch) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "03726190-e555-53be-8a03-a86a0b9dc33a",
+      "name": "Kommentér status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Find ændringer').item.json.number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $('Find ændringer').item.json.kommentar }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Hvert minut": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kør manuelt": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Hent pull requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hent pull requests": {
+      "main": [
+        [
+          {
+            "node": "Hent alle issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hent alle issues": {
+      "main": [
+        [
+          {
+            "node": "Find ændringer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find ændringer": {
+      "main": [
+        [
+          {
+            "node": "Opdatér issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Opdatér issue": {
+      "main": [
+        [
+          {
+            "node": "Kommentér status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

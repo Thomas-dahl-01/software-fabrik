@@ -1,0 +1,575 @@
+{
+  "name": "Fabrik 2 · Start opgave",
+  "nodes": [
+    {
+      "id": "e9d01d15-81ae-5955-a39d-fe2ad5417bee",
+      "name": "Beskrivelse",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -320
+      ],
+      "parameters": {
+        "content": "## 2 · Start opgave\n**Godkendt → Bygges**\n\nKun opgaver du selv har skrevet, og kun én ad gangen.\n\n*automatisk_runner = true* (basic B): runneren starter kodeagenten på branch issue-N.\n*automatisk_runner = false* (basic A): opgaven markeres Bygges, og du starter agenten selv.",
+        "width": 560,
+        "height": 240
+      }
+    },
+    {
+      "id": "badcd26b-20fe-5cb0-9c9e-eaa52db406b9",
+      "name": "Hvert minut",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c0f52ea3-5362-52d0-90b4-9be0021c257d",
+      "name": "Kør manuelt",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "8534acb2-acdd-5718-9613-2ed0a933d57a",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        100
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa3e74c1-9bf1-5ff5-b763-1a709ccce1d6",
+              "name": "ejer",
+              "value": "Thomas-dahl-01",
+              "type": "string"
+            },
+            {
+              "id": "9b5b602a-7fd2-51d8-96dc-01db8b66e7a0",
+              "name": "repo",
+              "value": "software-fabrik",
+              "type": "string"
+            },
+            {
+              "id": "d7f9c535-c5ca-54f0-a653-152c6593c22d",
+              "name": "forfatter",
+              "value": "Thomas-dahl-01",
+              "type": "string"
+            },
+            {
+              "id": "f029469c-a2f7-5340-b7c7-0548ebc60c9e",
+              "name": "runner_url",
+              "value": "http://host.docker.internal:8765",
+              "type": "string"
+            },
+            {
+              "id": "e723ecc9-c546-531a-a3f1-a9fa0655b12e",
+              "name": "automatisk_runner",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ac6e728c-887b-5387-bd1f-f17028c3d13e",
+      "name": "Hent åbne issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "open"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "sort",
+              "value": "created"
+            },
+            {
+              "name": "direction",
+              "value": "asc"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "alwaysOutputData": true,
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "f1935832-0310-5477-8e65-563b7b92cb9b",
+      "name": "Vælg næste opgave",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        100
+      ],
+      "parameters": {
+        "jsCode": "const TILSTANDE = ['Idé', 'Forfines', 'Klar til godkendelse', 'Godkendt', 'Bygges',\n                   'Venter på dig', 'Sidder fast', 'Din QA', 'Færdig'];\nconst K = $('Konfiguration').first().json;\nconst navne = (issue) => (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);\nconst tilstandAf = (issue) => navne(issue).find(n => TILSTANDE.includes(n)) || null;\nconst labelsMed = (issue, ny) => (issue ? navne(issue) : []).filter(n => !TILSTANDE.includes(n)).concat([ny]);\nconst erFabrik = (k) => (k.body || '').includes('<!-- fabrik');\nconst issueNr = (url) => Number(String(url).split('/').pop());\nconst renser = (t) => (t || '').replace(/<!--[\\s\\S]*?-->/g, '').trim();\nconst mine = (liste) => liste.map(i => i.json).filter(i => i.number && !i.pull_request &&\n  (i.user?.login || '').toLowerCase() === String(K.forfatter).toLowerCase());\n\nconst issues = mine($('Hent åbne issues').all());\nif (issues.some(i => tilstandAf(i) === 'Bygges')) return [];   // én opgave ad gangen\nconst naeste = issues.filter(i => tilstandAf(i) === 'Godkendt').sort((a, b) => a.number - b.number)[0];\nif (!naeste) return [];\nreturn [{ json: {\n  number: naeste.number, titel: naeste.title, body: naeste.body || '',\n  labels: labelsMed(naeste, 'Bygges'), automatisk: K.automatisk_runner === true || K.automatisk_runner === 'true',\n}}];"
+      }
+    },
+    {
+      "id": "a2d75e3b-8fc4-5aca-a394-48c874404b54",
+      "name": "Automatisk runner?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "ba5108ba-7a1e-5581-895b-72abbcefd0cd",
+              "leftValue": "={{ $json.automatisk }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ee181041-9775-525f-80a3-46719e44ecdb",
+      "name": "Spørg runner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.runner_url }}/status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fabrik-runner",
+          "name": "Fabrik Runner"
+        }
+      }
+    },
+    {
+      "id": "c13c5943-536a-5e22-a8a1-024491360d27",
+      "name": "Er runneren ledig?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "jsCode": "if ($json.ledig !== true) return [];   // runneren er optaget eller nede -> prøv igen næste minut\nreturn [$('Vælg næste opgave').first()];"
+      }
+    },
+    {
+      "id": "ecb688f3-a81a-5f95-8595-f8be55aaad94",
+      "name": "Hent issue-kommentarer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Vælg næste opgave').first().json.number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "alwaysOutputData": true,
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "b76e7626-83bf-55a2-af83-6ba1f5fa0ec1",
+      "name": "Byg opgave til agenten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const TILSTANDE = ['Idé', 'Forfines', 'Klar til godkendelse', 'Godkendt', 'Bygges',\n                   'Venter på dig', 'Sidder fast', 'Din QA', 'Færdig'];\nconst K = $('Konfiguration').first().json;\nconst navne = (issue) => (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);\nconst tilstandAf = (issue) => navne(issue).find(n => TILSTANDE.includes(n)) || null;\nconst labelsMed = (issue, ny) => (issue ? navne(issue) : []).filter(n => !TILSTANDE.includes(n)).concat([ny]);\nconst erFabrik = (k) => (k.body || '').includes('<!-- fabrik');\nconst issueNr = (url) => Number(String(url).split('/').pop());\nconst renser = (t) => (t || '').replace(/<!--[\\s\\S]*?-->/g, '').trim();\nconst mine = (liste) => liste.map(i => i.json).filter(i => i.number && !i.pull_request &&\n  (i.user?.login || '').toLowerCase() === String(K.forfatter).toLowerCase());\n\nconst v = $('Vælg næste opgave').first().json;\nconst k = $('Hent issue-kommentarer').all().map(i => i.json).filter(x => x.id);\nlet specIdx = -1;\nk.forEach((x, i) => { if ((x.body || '').includes('<!-- fabrik:spec -->')) specIdx = i; });\nconst spec = specIdx >= 0\n  ? renser(k[specIdx].body).split('\\n').filter(l => !l.startsWith('_Svar eller ret')).join('\\n').trim()\n  : null;\nconst efter = k.slice(specIdx + 1).map(x =>\n  `**${erFabrik(x) ? 'Fabrikken' : 'Udvikleren'}** (${x.created_at}):\\n${renser(x.body)}`).join('\\n\\n');\nconst opgave = [\n  `# Issue #${v.number}: ${v.titel}`, '',\n  '## Gældende specifikation', spec || v.body || '(ingen)', '',\n  '## Udviklerens oprindelige beskrivelse', v.body || '(ingen)', '',\n  '## Kommentarer efter specifikationen (svar og feedback fra udvikleren har forrang)', efter || '(ingen)',\n].join('\\n');\nreturn [{ json: { issue: v.number, titel: v.titel, opgave } }];"
+      }
+    },
+    {
+      "id": "fabde0ef-f0a7-5911-941a-9f3c13f70266",
+      "name": "Sæt Bygges",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Vælg næste opgave').first().json.number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ labels: $('Vælg næste opgave').first().json.labels }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "e7cc3576-b0fc-5431-9b6f-f656ffbff580",
+      "name": "Send til runner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.runner_url }}/opgaver",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ issue: $('Byg opgave til agenten').first().json.issue, titel: $('Byg opgave til agenten').first().json.titel, opgave: $('Byg opgave til agenten').first().json.opgave }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fabrik-runner",
+          "name": "Fabrik Runner"
+        }
+      }
+    },
+    {
+      "id": "2de8bb56-0e9d-56bf-868b-328fc1595eaf",
+      "name": "Kommentér: agent startet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Vælg næste opgave').first().json.number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: '<!-- fabrik:startet -->\\n🏗️ Kodeagenten er gået i gang på branch `issue-' + $('Vælg næste opgave').first().json.number + '`. Den stopper senest efter 30 minutter.' }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "dd4cdcf3-b8fa-5bef-9753-9866ece77388",
+      "name": "Sæt Bygges (manuel)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        220
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Vælg næste opgave').first().json.number }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ labels: $('Vælg næste opgave').first().json.labels }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "5f22689b-1380-54c7-aeea-b2ce7c93de9f",
+      "name": "Kommentér: start agenten selv",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        220
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Vælg næste opgave').first().json.number }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: '<!-- fabrik:manuel -->\\n🏗️ Opgaven er markeret **Bygges**. Start kodeagenten selv på branch `issue-' + $('Vælg næste opgave').first().json.number + '` med issuet som input, og åbn en pull request fra den branch.' }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Hvert minut": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kør manuelt": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Hent åbne issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hent åbne issues": {
+      "main": [
+        [
+          {
+            "node": "Vælg næste opgave",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vælg næste opgave": {
+      "main": [
+        [
+          {
+            "node": "Automatisk runner?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Automatisk runner?": {
+      "main": [
+        [
+          {
+            "node": "Spørg runner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sæt Bygges (manuel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spørg runner": {
+      "main": [
+        [
+          {
+            "node": "Er runneren ledig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Er runneren ledig?": {
+      "main": [
+        [
+          {
+            "node": "Hent issue-kommentarer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hent issue-kommentarer": {
+      "main": [
+        [
+          {
+            "node": "Byg opgave til agenten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Byg opgave til agenten": {
+      "main": [
+        [
+          {
+            "node": "Sæt Bygges",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sæt Bygges": {
+      "main": [
+        [
+          {
+            "node": "Send til runner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send til runner": {
+      "main": [
+        [
+          {
+            "node": "Kommentér: agent startet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sæt Bygges (manuel)": {
+      "main": [
+        [
+          {
+            "node": "Kommentér: start agenten selv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

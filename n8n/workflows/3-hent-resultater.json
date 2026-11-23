@@ -1,0 +1,690 @@
+{
+  "name": "Fabrik 3 · Hent resultater",
+  "nodes": [
+    {
+      "id": "e872fa66-34c9-5447-961a-41446944a25b",
+      "name": "Beskrivelse",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -340
+      ],
+      "parameters": {
+        "content": "## 3 · Hent resultater fra runneren\n**Bygges → Din QA / Venter på dig / Sidder fast**\n\nSpørger runneren hvert minut. For hvert resultat:\n- **faerdig** → fabrikken åbner pull request, opgaven går til *Din QA*\n- **spoergsmaal** → spørgsmålet postes på issuet, *Venter på dig*\n- **sidder_fast** → fejl eller over 30 min, *Sidder fast*\n\nTil sidst kvitteres der, så runneren glemmer resultatet.",
+        "width": 560,
+        "height": 280
+      }
+    },
+    {
+      "id": "badcd26b-20fe-5cb0-9c9e-eaa52db406b9",
+      "name": "Hvert minut",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c0f52ea3-5362-52d0-90b4-9be0021c257d",
+      "name": "Kør manuelt",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "8534acb2-acdd-5718-9613-2ed0a933d57a",
+      "name": "Konfiguration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        100
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aa3e74c1-9bf1-5ff5-b763-1a709ccce1d6",
+              "name": "ejer",
+              "value": "Thomas-dahl-01",
+              "type": "string"
+            },
+            {
+              "id": "9b5b602a-7fd2-51d8-96dc-01db8b66e7a0",
+              "name": "repo",
+              "value": "software-fabrik",
+              "type": "string"
+            },
+            {
+              "id": "d7f9c535-c5ca-54f0-a653-152c6593c22d",
+              "name": "forfatter",
+              "value": "Thomas-dahl-01",
+              "type": "string"
+            },
+            {
+              "id": "f029469c-a2f7-5340-b7c7-0548ebc60c9e",
+              "name": "runner_url",
+              "value": "http://host.docker.internal:8765",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "99779811-7a38-5e7d-98ed-9fd79466657e",
+      "name": "Spørg runner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Konfiguration').first().json.runner_url }}/status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fabrik-runner",
+          "name": "Fabrik Runner"
+        }
+      }
+    },
+    {
+      "id": "d6df956a-7f71-5847-a118-76b5b28e29a1",
+      "name": "Hent åbne issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "open"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "sort",
+              "value": "created"
+            },
+            {
+              "name": "direction",
+              "value": "asc"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "alwaysOutputData": true,
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "396bf8b5-00ea-5bab-ab82-9f06a3fd3a60",
+      "name": "Match resultater",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        100
+      ],
+      "parameters": {
+        "jsCode": "const TILSTANDE = ['Idé', 'Forfines', 'Klar til godkendelse', 'Godkendt', 'Bygges',\n                   'Venter på dig', 'Sidder fast', 'Din QA', 'Færdig'];\nconst K = $('Konfiguration').first().json;\nconst navne = (issue) => (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);\nconst tilstandAf = (issue) => navne(issue).find(n => TILSTANDE.includes(n)) || null;\nconst labelsMed = (issue, ny) => (issue ? navne(issue) : []).filter(n => !TILSTANDE.includes(n)).concat([ny]);\nconst erFabrik = (k) => (k.body || '').includes('<!-- fabrik');\nconst issueNr = (url) => Number(String(url).split('/').pop());\nconst renser = (t) => (t || '').replace(/<!--[\\s\\S]*?-->/g, '').trim();\nconst mine = (liste) => liste.map(i => i.json).filter(i => i.number && !i.pull_request &&\n  (i.user?.login || '').toLowerCase() === String(K.forfatter).toLowerCase());\n\nconst status = $('Spørg runner').first().json;\nconst issues = $('Hent åbne issues').all().map(i => i.json).filter(i => i.number && !i.pull_request);\nconst efterNr = Object.fromEntries(issues.map(i => [i.number, i]));\nconst resultater = status.resultater || [];\nconst ud = [];\nconst min = (s) => Math.max(1, Math.round((s || 0) / 60));\nconst fod = (r) => `⏱️ ${min(r.varighed_sek)} min` +\n  (r.pris_usd != null ? ` · 💰 $${Number(r.pris_usd).toFixed(2)}` : '') +\n  (r.antal_ture != null ? ` · 🔁 ${r.antal_ture} ture` : '');\n\nfor (const r of resultater) {\n  const i = efterNr[r.issue];\n  const filer = (r.filer || []).map(f => `- \\`${f}\\``).join('\\n') || '- (ingen)';\n  ud.push({ json: { ...r, fra_runner: true,\n    labels_qa: labelsMed(i, 'Din QA'), labels_venter: labelsMed(i, 'Venter på dig'), labels_fast: labelsMed(i, 'Sidder fast'),\n    pr_titel: `#${r.issue}: ${i?.title ?? r.branch}`,\n    pr_krop: [`<!-- fabrik:pr -->`, `Closes #${r.issue}`, '', '## Hvad agenten har lavet', r.opsummering || '(ingen opsummering)', '',\n              '## Tests', r.tests || '(ingen tests angivet)', '', '## Ændrede filer', filer, '', '---',\n              `${fod(r)} · 🤖 Lavet af kodeagenten via softwarefabrikken. **Review før merge.**`].join('\\n'),\n    kommentar_faerdig: [`<!-- fabrik:faerdig -->`, `✅ **Agenten er færdig** – opgaven er flyttet til **Din QA**.`, '',\n              r.opsummering || '', '', `**Tests:** ${r.tests || '(ingen angivet)'}`, '', fod(r)].join('\\n'),\n    kommentar_spoergsmaal: [`<!-- fabrik:spoergsmaal -->`, `❓ **Agenten har et spørgsmål**`, '',\n              (r.spoergsmaal || '').split('\\n').map(l => '> ' + l).join('\\n'), '',\n              `**Lavet indtil nu:** ${r.opsummering || '(intet)'}`, '',\n              '_Svar i en kommentar. Så flytter fabrikken opgaven tilbage til **Godkendt**, og agenten starter igen med dit svar._'].join('\\n'),\n    kommentar_fast: [`<!-- fabrik:sidder-fast -->`, `🧱 **Agenten sidder fast**`, '', r.opsummering || '', '',\n              r.log_hale ? `<details><summary>Sidste del af loggen</summary>\\n\\n\\`\\`\\`\\n${r.log_hale.replace(/```/g, \"'''\")}\\n\\`\\`\\`\\n</details>\\n` : '',\n              fod(r), '',\n              '_Flyt opgaven til **Godkendt** for at prøve igen (skriv gerne et hint i en kommentar), eller luk issuet for at droppe den._'].join('\\n'),\n  }});\n}\n\n// Issues der står som Bygges, men som runneren ikke kender (fx runneren var nede) -> Sidder fast.\nconst aktivNr = status.aktiv?.issue;\nfor (const i of issues) {\n  const kendt = i.number === aktivNr || resultater.some(r => r.issue === i.number);\n  const gammel = Date.now() - new Date(i.updated_at).getTime() > 3 * 60 * 1000;\n  if (tilstandAf(i) === 'Bygges' && !kendt && gammel) {\n    ud.push({ json: { issue: i.number, status: 'sidder_fast', fra_runner: false, labels_fast: labelsMed(i, 'Sidder fast'),\n      kommentar_fast: '<!-- fabrik:sidder-fast -->\\n🧱 **Sidder fast:** issuet står som Bygges, men runneren arbejder ikke på det ' +\n        '(runneren var nede eller blev genstartet).\\n\\n_Flyt opgaven til **Godkendt** for at prøve igen, eller luk issuet._' } });\n  }\n}\nreturn ud;"
+      }
+    },
+    {
+      "id": "fc2f91e1-2916-55f6-abab-f006ee334e47",
+      "name": "Færdige",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -60
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().filter(x => x.json.status === 'faerdig').slice(0, 1);  // én ad gangen"
+      }
+    },
+    {
+      "id": "f661ff3d-73ff-5cef-be6a-98268e7f2e8f",
+      "name": "Opret pull request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -60
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/pulls",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $('Færdige').first().json.pr_titel, head: $('Færdige').first().json.branch, base: 'main', body: $('Færdige').first().json.pr_krop }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "a1abe972-436f-5e04-aa8d-82a1ff181c0f",
+      "name": "Kommentér: færdig",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        -60
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Færdige').first().json.issue }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $('Færdige').first().json.kommentar_faerdig + ($json.html_url ? '\\n\\n🔗 Pull request: ' + $json.html_url : '\\n\\n(Pull requesten fandtes allerede og er opdateret med de nye commits.)') }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "4da49125-ebe4-5edf-8eaa-dd249a3b2b4b",
+      "name": "Sæt Din QA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        -60
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Færdige').first().json.issue }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ labels: $('Færdige').first().json.labels_qa }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "2d36c8f6-6fb4-58cc-8926-f7ec933f13d2",
+      "name": "Kvittér færdig",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        -60
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.runner_url }}/resultater/{{ $('Færdige').first().json.issue }}/kvitter",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fabrik-runner",
+          "name": "Fabrik Runner"
+        }
+      }
+    },
+    {
+      "id": "5b4036b1-7f67-55df-b592-41a71fd247ea",
+      "name": "Spørgsmål",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        120
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().filter(x => x.json.status === 'spoergsmaal').slice(0, 1);  // én ad gangen"
+      }
+    },
+    {
+      "id": "c7844e26-84dd-5f4a-b481-507f25c9d712",
+      "name": "Post spørgsmål",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Spørgsmål').first().json.issue }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $('Spørgsmål').first().json.kommentar_spoergsmaal }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "acf6de13-f96f-53ab-b7cf-0d3ff79363aa",
+      "name": "Sæt Venter på dig",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        120
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Spørgsmål').first().json.issue }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ labels: $('Spørgsmål').first().json.labels_venter }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "56ab79b2-9de6-53d6-9509-817d4fed5978",
+      "name": "Kvittér spørgsmål",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.runner_url }}/resultater/{{ $('Spørgsmål').first().json.issue }}/kvitter",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fabrik-runner",
+          "name": "Fabrik Runner"
+        }
+      }
+    },
+    {
+      "id": "243a95e6-c155-50c4-9486-6567c700a9ff",
+      "name": "Sidder fast",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "jsCode": "return $input.all().filter(x => x.json.status === 'sidder_fast').slice(0, 1);  // én ad gangen"
+      }
+    },
+    {
+      "id": "b0d84b78-1ae0-5332-9458-2d3114e249d2",
+      "name": "Kommentér: sidder fast",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Sidder fast').first().json.issue }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $('Sidder fast').first().json.kommentar_fast }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "7d49a424-43f5-5e89-9429-059068985b53",
+      "name": "Sæt Sidder fast",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.github.com/repos/{{ $('Konfiguration').first().json.ejer }}/{{ $('Konfiguration').first().json.repo }}/issues/{{ $('Sidder fast').first().json.issue }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ labels: $('Sidder fast').first().json.labels_fast }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "githubApi": {
+          "id": "github-fabrik",
+          "name": "GitHub Fabrik"
+        }
+      }
+    },
+    {
+      "id": "aad158b1-a6b3-5b27-ade3-42ec69e18b1d",
+      "name": "Kvittér sidder fast",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Konfiguration').first().json.runner_url }}/resultater/{{ $('Sidder fast').first().json.issue }}/kvitter",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "fabrik-runner",
+          "name": "Fabrik Runner"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Hvert minut": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kør manuelt": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration": {
+      "main": [
+        [
+          {
+            "node": "Spørg runner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spørg runner": {
+      "main": [
+        [
+          {
+            "node": "Hent åbne issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hent åbne issues": {
+      "main": [
+        [
+          {
+            "node": "Match resultater",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match resultater": {
+      "main": [
+        [
+          {
+            "node": "Færdige",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Spørgsmål",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sidder fast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Færdige": {
+      "main": [
+        [
+          {
+            "node": "Opret pull request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Opret pull request": {
+      "main": [
+        [
+          {
+            "node": "Kommentér: færdig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kommentér: færdig": {
+      "main": [
+        [
+          {
+            "node": "Sæt Din QA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sæt Din QA": {
+      "main": [
+        [
+          {
+            "node": "Kvittér færdig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spørgsmål": {
+      "main": [
+        [
+          {
+            "node": "Post spørgsmål",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post spørgsmål": {
+      "main": [
+        [
+          {
+            "node": "Sæt Venter på dig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sæt Venter på dig": {
+      "main": [
+        [
+          {
+            "node": "Kvittér spørgsmål",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sidder fast": {
+      "main": [
+        [
+          {
+            "node": "Kommentér: sidder fast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kommentér: sidder fast": {
+      "main": [
+        [
+          {
+            "node": "Sæt Sidder fast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sæt Sidder fast": {
+      "main": [
+        [
+          {
+            "node": "Kvittér sidder fast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}
