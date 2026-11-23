@@ -192,8 +192,16 @@ return [{ json: { number: issue.number, messages: [
     formater = r"""
 const valgt = $('Vælg opgave til forfining').first().json;
 const raa = $json.message?.content ?? '';
+// Den lille lokale model (qwen3:4b) skriver af og til kinesiske tegn i stedet for æøå,
+// fx "m氓" for "må", "v忙re" for "være" og "f酶rste" for "første" (set i issue #5).
+// De kendte erstattes, og findes der stadig CJK-tegn, får du en advarsel i kommentaren.
+const RETTELSER = { '氓': 'å', '忙': 'æ', '酶': 'ø' };
+const ret = (v) => typeof v === 'string' ? v.replace(/[氓忙酶]/g, c => RETTELSER[c])
+  : Array.isArray(v) ? v.map(ret)
+  : (v && typeof v === 'object') ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, ret(x)])) : v;
 let s = null;
-try { s = JSON.parse(raa.replace(/^\s*```(json)?/, '').replace(/```\s*$/, '').trim()); } catch (e) {}
+try { s = ret(JSON.parse(raa.replace(/^\s*```(json)?/, '').replace(/```\s*$/, '').trim())); } catch (e) {}
+const cjk = s ? (JSON.stringify(s).match(/[㐀-鿿]/g) || []) : [];
 const liste = (a) => (Array.isArray(a) && a.length) ? a.map(x => `- ${x}`).join('\n') : '- (ingen)';
 const tjek = (a) => (Array.isArray(a) && a.length) ? a.map(x => `- [ ] ${x}`).join('\n') : '- (ingen)';
 let krop;
@@ -217,6 +225,7 @@ if (!s) {
     '### ❓ Spørgsmål til dig', liste(s.spoergsmaal), '',
     '### 💡 AI\'ens vurdering', `**Størrelse:** ${v.stoerrelse ?? '?'} · **Risiko:** ${v.risiko ?? '?'}`, '',
     v.anbefaling ?? '', '',
+    cjk.length ? `> ⚠️ Modellen skrev tegn, der ikke er dansk (${[...new Set(cjk)].join(' ')}). Læs teksten ekstra grundigt.\n` : '',
     '---',
     '_Svar eller ret i en kommentar, så forfiner jeg igen. Når du er tilfreds, flytter du selv opgaven til **Godkendt**._',
   ].join('\n');
