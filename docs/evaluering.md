@@ -4,7 +4,7 @@ Udfyld én række pr. opgave, der er kørt gennem fabrikken. Tal for varighed, p
 
 | Issue | PR | Type | Forfininger | Spørgsmål fra agent | Kørsler | Varighed | Pris | Udfald | Hvor greb jeg ind? |
 |---|---|---|---|---|---|---|---|---|---|
-| #1 | #… | produkt/fabrik | 1 | 0 | 1 | … min | $… | merget / sendt tilbage / lukket | … |
+| #1 | #2 | produkt (testkørsel, finance) | 1 | 0 | 2 | 1,2 min | ≈ $0,30 (abonnement) | merget | 1. kørsel: Sidder fast, fordi Claude Code ikke var logget ind (runneren blev rettet til at vise agentens fejl). AI-trinnet valgte REAL til beløb, agenten brugte INTEGER (øre) |
 
 ## Observationer
 

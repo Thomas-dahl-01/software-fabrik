@@ -1,4 +1,4 @@
-"""Gør modulerne i produkt/ importérbare fra testene."""
+"""Gør pakken produkt/fodbold importérbar fra testene."""
 
 import sys
 from pathlib import Path

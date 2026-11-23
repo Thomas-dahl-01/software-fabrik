@@ -229,8 +229,13 @@ return [{ json: { number: valgt.number, body: krop, labels: valgt.labels_klar } 
                   repo_kontekst=(
                       "Ét repo med to dele: (1) fabrikken selv: n8n-workflows som JSON i n8n/workflows/ "
                       "(genereres af scripts/byg_workflows.py) og runneren i runner/ (Python, kun standardbiblioteket). "
-                      "(2) Produktet i produkt/: en personlig finance tracker i Python 3.12+ med SQLite "
-                      "(standardbiblioteket) og pytest til tests. Opgaver om produktet må kun ændre filer i produkt/. "
+                      "(2) Produktet i produkt/: Football Team Manager, et administrationssystem til et fodboldhold "
+                      "som terminal-app. Python 3.12+, kun standardbiblioteket (sqlite3, argparse) og pytest. "
+                      "Fast struktur: pakken produkt/fodbold/ med db.py (SQLite-forbindelse, db.forbind()), ét modul "
+                      "pr. område (fx spillere.py, kampe.py) med funktioner der tager en sqlite3.Connection, og "
+                      "cli.py (argparse, køres med 'python -m fodbold' fra produkt/). Tests i produkt/tests/ med "
+                      "':memory:'-database. Funktions- og tabelnavne på dansk uden æøå. Opgaver om produktet må kun "
+                      "ændre filer i produkt/. Byg videre på eksisterende moduler i stedet for at lave nye løsninger. "
                       "Kør tests med: python -m pytest produkt"))
     V = "$('Vælg opgave til forfining').first().json"
     F = "$('Formater kommentar').first().json"

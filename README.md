@@ -2,7 +2,9 @@
 
 En lille softwarefabrik: jeg skriver en opgave som et GitHub-issue, et AI-trin i n8n forfiner den til en klar specifikation, og når jeg har godkendt den, bygger en kodeagent (Claude Code) den på sin egen branch og afleverer en pull request til mit review.
 
-Fabrikken bygger en **personlig finance tracker** i [`produkt/`](produkt/), og den bygger dele af sig selv.
+Fabrikken bygger en **Football Team Manager** (en terminal-app til et fodboldhold: spillere, kampe, mål og assists, statistik og træninger) i [`produkt/`](produkt/), og den bygger dele af sig selv.
+
+> Issue #1 (en finance tracker) var fabrikkens første testkørsel. Derefter skiftede produktet til Football Team Manager.
 
 ```
 Idé → Forfines → Klar til godkendelse → Godkendt → Bygges → Din QA → Færdig
