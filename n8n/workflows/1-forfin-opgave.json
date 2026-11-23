@@ -1,4 +1,5 @@
 {
+  "id": "fabrikWorkflow01",
   "name": "Fabrik 1 · Forfin opgave",
   "nodes": [
     {
@@ -86,7 +87,7 @@
             {
               "id": "512cbf22-a9a7-57ba-a2cd-5201a5ef03b3",
               "name": "model",
-              "value": "gemma4:31b-cloud",
+              "value": "qwen3:4b",
               "type": "string"
             },
             {
@@ -143,8 +144,8 @@
       "alwaysOutputData": true,
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -187,8 +188,8 @@
       "alwaysOutputData": true,
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -228,8 +229,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -263,8 +264,8 @@
       "alwaysOutputData": true,
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -295,7 +296,7 @@
         "url": "={{ $('Konfiguration').first().json.ollama_url }}/api/chat",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $('Konfiguration').first().json.model, messages: $json.messages, stream: false, format: 'json', options: { temperature: 0.2 } }) }}",
+        "jsonBody": "={{ JSON.stringify({ model: $('Konfiguration').first().json.model, messages: $json.messages, stream: false, format: 'json', think: false, options: { temperature: 0.2 } }) }}",
         "options": {
           "timeout": 600000
         }
@@ -337,8 +338,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -365,8 +366,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -406,8 +407,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -434,8 +435,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     }

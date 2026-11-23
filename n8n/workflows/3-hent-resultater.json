@@ -1,4 +1,5 @@
 {
+  "id": "fabrikWorkflow03",
   "name": "Fabrik 3 · Hent resultater",
   "nodes": [
     {
@@ -155,8 +156,8 @@
       "alwaysOutputData": true,
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -210,8 +211,8 @@
       "onError": "continueRegularOutput",
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -238,8 +239,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -266,8 +267,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -335,8 +336,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -363,8 +364,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -432,8 +433,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -460,8 +461,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },

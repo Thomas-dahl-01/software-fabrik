@@ -35,7 +35,7 @@ def laes_env(fil: Path) -> None:
     """Indlæs KEY=VALUE-linjer fra runner/.env, uden at overskrive miljøet."""
     if not fil.exists():
         return
-    for linje in fil.read_text(encoding="utf-8").splitlines():
+    for linje in fil.read_text(encoding="utf-8-sig").splitlines():
         linje = linje.strip()
         if linje and not linje.startswith("#") and "=" in linje:
             noegle, vaerdi = linje.split("=", 1)
@@ -46,7 +46,7 @@ laes_env(MAPPE / ".env")
 
 REPO_URL = os.environ.get("FABRIK_REPO_URL", "")
 TOKEN = os.environ.get("FABRIK_TOKEN", "")
-VAERT = os.environ.get("FABRIK_VAERT", "0.0.0.0")
+VAERT = os.environ.get("FABRIK_VAERT", "127.0.0.1")
 PORT = int(os.environ.get("FABRIK_PORT", "8765"))
 AGENT = os.environ.get("FABRIK_AGENT", "claude")
 MODEL = os.environ.get("FABRIK_MODEL", "")  # tom = agentens standardmodel

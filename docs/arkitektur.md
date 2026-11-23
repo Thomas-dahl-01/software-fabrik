@@ -11,7 +11,7 @@ flowchart LR
     subgraph D[Docker]
         N[n8n<br/>4 workflows<br/>poller hvert minut]
     end
-    O[Ollama<br/>gemma4:31b-cloud<br/>AI-trin]
+    O[Ollama<br/>qwen3:4b<br/>AI-trin]
     R[Runner<br/>runner/runner.py<br/>port 8765]
     A[Kodeagent<br/>Claude Code CLI<br/>headless]
 

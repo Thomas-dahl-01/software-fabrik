@@ -1,4 +1,5 @@
 {
+  "id": "fabrikWorkflow02",
   "name": "Fabrik 2 · Start opgave",
   "nodes": [
     {
@@ -136,8 +137,8 @@
       "alwaysOutputData": true,
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -256,8 +257,8 @@
       "alwaysOutputData": true,
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -297,8 +298,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -353,8 +354,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -381,8 +382,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     },
@@ -409,8 +410,8 @@
       },
       "credentials": {
         "githubApi": {
-          "id": "github-fabrik",
-          "name": "GitHub Fabrik"
+          "id": "7l2RzCfRxIwesUNF",
+          "name": "GitHub account"
         }
       }
     }

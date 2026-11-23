@@ -17,7 +17,7 @@ PROMPT = (ROD / "n8n" / "prompts" / "forfining.md").read_text(encoding="utf-8")
 
 K = "$('Konfiguration').first().json"
 GH = "https://api.github.com/repos/{{ " + K + ".ejer }}/{{ " + K + ".repo }}"
-GH_CRED = {"githubApi": {"id": "github-fabrik", "name": "GitHub Fabrik"}}
+GH_CRED = {"githubApi": {"id": "7l2RzCfRxIwesUNF", "name": "GitHub account"}}
 RUNNER_CRED = {"httpHeaderAuth": {"id": "fabrik-runner", "name": "Fabrik Runner"}}
 
 # Fælles JavaScript-hjælpere, som indsættes øverst i alle Code-noder.
@@ -112,7 +112,9 @@ def workflow(navn, noder, kanter):
         while len(main) <= idx:
             main.append([])
         main[idx].append({"node": til, "type": "main", "index": 0})
-    return {"name": navn, "nodes": noder, "connections": forbindelser,
+    # Fast id ("fabrikWorkflow01" osv.), så en genimport via n8n's CLI overskriver i stedet for at lave dubletter.
+    wf_id = "fabrikWorkflow0" + navn.split("·")[0].strip().split()[-1]
+    return {"id": wf_id, "name": navn, "nodes": noder, "connections": forbindelser,
             "settings": {"executionOrder": "v1"}, "active": False, "pinData": {}}
 
 
@@ -223,7 +225,7 @@ return [{ json: { number: valgt.number, body: krop, labels: valgt.labels_klar } 
 """
     konfig = dict(FELLES_KONFIG,
                   ollama_url="http://host.docker.internal:11434",
-                  model="gemma4:31b-cloud",
+                  model="qwen3:4b",
                   repo_kontekst=(
                       "Ét repo med to dele: (1) fabrikken selv: n8n-workflows som JSON i n8n/workflows/ "
                       "(genereres af scripts/byg_workflows.py) og runneren i runner/ (Python, kun standardbiblioteket). "
@@ -250,7 +252,7 @@ return [{ json: { number: valgt.number, body: krop, labels: valgt.labels_klar } 
              query={"per_page": "100"}, **ALTID),
         kode("Byg prompt", 1540, 0, byg_prompt),
         http("AI-trin (Ollama)", 1760, 0, "POST", "{{ " + K + ".ollama_url }}/api/chat",
-             krop="{ model: " + K + ".model, messages: $json.messages, stream: false, format: 'json', "
+             krop="{ model: " + K + ".model, messages: $json.messages, stream: false, format: 'json', think: false, "
                   "options: { temperature: 0.2 } }", cred=None, timeout=600000),
         kode("Formater kommentar", 1980, 0, formater),
         http("Skriv forfinet opgave", 2200, 0, "POST", GH + "/issues/{{ " + F + ".number }}/comments",

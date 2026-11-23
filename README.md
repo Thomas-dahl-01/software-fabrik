@@ -25,11 +25,7 @@ Idé → Forfines → Klar til godkendelse → Godkendt → Bygges → Din QA �
 
 ### 1. Forudsætninger
 - Docker med n8n på `http://localhost:5678`
-- Ollama med modellen fra `Konfiguration`-noden (standard `gemma4:31b-cloud`). Ollama skal lytte på alle interfaces, for at n8n i Docker kan nå den:
-  ```powershell
-  [Environment]::SetEnvironmentVariable('OLLAMA_HOST', '0.0.0.0', 'User')
-  ```
-  Genstart derefter Ollama.
+- Ollama med modellen fra `Konfiguration`-noden (standard `qwen3:4b`). Med Docker Desktop når n8n Ollama og runneren på værtens localhost via `host.docker.internal`, så begge kan nøjes med at lytte på 127.0.0.1.
 - Python 3.12+ og git
 - Claude Code CLI (`claude`) installeret og logget ind:
   ```powershell
@@ -57,7 +53,7 @@ python runner/runner.py
 
 ### 4. n8n
 1. Opret to credentials i n8n:
-   - **GitHub Fabrik** (type *GitHub API*): dit token
+   - **GitHub account** (type *GitHub API*): dit token (fx fra `gh auth token`). Ret id og navn i `GH_CRED` i `scripts/byg_workflows.py`, hvis din credential har et andet id
    - **Fabrik Runner** (type *Header Auth*): navn `X-Fabrik-Token`, værdi = `FABRIK_TOKEN` fra `runner/.env`
 2. Importér de 4 filer fra `n8n/workflows/` (*Workflows → Import from file*), og vælg credentials i HTTP-noderne.
 3. Tjek `Konfiguration`-noden i hvert workflow (ejer, repo, forfatter, model, URL'er).
