@@ -376,7 +376,8 @@ const resultater = status.resultater || [];
 const ud = [];
 const min = (s) => Math.max(1, Math.round((s || 0) / 60));
 const fod = (r) => `⏱️ ${min(r.varighed_sek)} min` +
-  (r.pris_usd != null ? ` · 💰 $${Number(r.pris_usd).toFixed(2)}` : '') +
+  // Claude Code oplyser altid den beregnede API-pris; med abonnement betales den ikke.
+  (r.pris_usd != null ? ` · 💰 ≈ $${Number(r.pris_usd).toFixed(2)} i API-pris (dækket af abonnement)` : '') +
   (r.antal_ture != null ? ` · 🔁 ${r.antal_ture} ture` : '');
 
 for (const r of resultater) {
