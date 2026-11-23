@@ -248,6 +248,10 @@ def koer_opgave(issue: int, titel: str, opgave: str) -> None:
         if timeout:
             res = resultat(issue, "sidder_fast",
                            opsummering=f"Agenten blev stoppet efter {TIMEOUT_SEK // 60} minutter.", **felles)
+        elif data.get("is_error") or not data:
+            # Agenten kunne ikke køre (fx ikke logget ind, API-fejl, ugyldigt output).
+            grund = (tekst or raa[-300:] or "intet output").strip()
+            res = resultat(issue, "sidder_fast", opsummering=f"Kodeagenten fejlede: {grund}", **felles)
         else:
             blok = fortolk_status(tekst)
             if blok is None:

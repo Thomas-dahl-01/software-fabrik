@@ -122,6 +122,14 @@ def test_hemmelighed_pushes_ikke(opsaetning, monkeypatch):
     assert "issue-7" not in remote_branches(opsaetning)
 
 
+def test_agent_fejl_vises_i_opsummering(opsaetning, monkeypatch):
+    svar = json.dumps({"type": "result", "is_error": True, "result": "Not logged in · Please run /login"})
+    monkeypatch.setattr(runner, "agent_kommando",
+                        lambda: [sys.executable, "-c", f"import sys; sys.stdin.read(); print({svar!r})"])
+    res = koer(monkeypatch, "faerdig")
+    assert res["status"] == "sidder_fast" and "Not logged in" in res["opsummering"]
+
+
 def test_statusblok_fortolkes():
     tekst = 'bla\n```fabrik-status\n{"status": "Færdig", "opsummering": "x"}\n```'
     assert runner.fortolk_status(tekst)["status"] == "faerdig"
