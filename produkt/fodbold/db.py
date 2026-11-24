@@ -4,7 +4,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-from fodbold import spillere
+from fodbold import kampe, spillere
 
 STANDARD_STI = Path(__file__).resolve().parent.parent / "data" / "hold.db"
 
@@ -28,3 +28,4 @@ def forbind(sti=None):
 def opret_tabeller(forbindelse):
     """Lad hvert modul oprette sine egne tabeller."""
     spillere.opret_tabel(forbindelse)
+    kampe.opret_tabel(forbindelse)

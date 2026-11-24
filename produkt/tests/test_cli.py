@@ -1,6 +1,6 @@
 import pytest
 
-from fodbold import cli, db, spillere
+from fodbold import cli, db, kampe, spillere
 
 
 @pytest.fixture
@@ -58,3 +58,67 @@ def test_forbind_bruger_fodbold_db(tmp_path, monkeypatch):
     spillere.opret_spiller(forb, "Anna", 9, "Angriber")
     forb.close()
     assert sti.exists()
+
+
+def test_registrer_kamp_via_cli(forbindelse, capsys):
+    kode = cli.main(
+        ["kamp", "registrer", "--dato", "2026-11-23", "--modstander", "Vejle B",
+         "--spillested", "hjemme", "--resultat", "2-1"],
+        forbindelse=forbindelse,
+    )
+
+    assert kode == 0
+    assert "Vejle B" in capsys.readouterr().out
+    assert kampe.hent_kampe(forbindelse) == [
+        {"id": 1, "dato": "2026-11-23", "modstander": "Vejle B",
+         "spillested": "hjemme", "resultat": "2-1"}
+    ]
+
+
+def test_registrer_kamp_via_cli_afviser_ugyldigt_spillested(forbindelse):
+    with pytest.raises(SystemExit):
+        cli.main(
+            ["kamp", "registrer", "--dato", "2026-11-23", "--modstander", "AGF",
+             "--spillested", "neutral", "--resultat", "1-1"],
+            forbindelse=forbindelse,
+        )
+    assert kampe.hent_kampe(forbindelse) == []
+
+
+def test_registrer_kamp_via_cli_afviser_ugyldig_dato(forbindelse, capsys):
+    kode = cli.main(
+        ["kamp", "registrer", "--dato", "23-11-2026", "--modstander", "AGF",
+         "--spillested", "ude", "--resultat", "1-1"],
+        forbindelse=forbindelse,
+    )
+
+    assert kode == 1
+    assert "Fejl" in capsys.readouterr().out
+    assert kampe.hent_kampe(forbindelse) == []
+
+
+def test_vis_kampe_tom_database(forbindelse, capsys):
+    cli.vis_kampe(forbindelse)
+    assert capsys.readouterr().out.strip() == "Ingen kampe registreret."
+
+
+def test_vis_kampe_viser_alle_kampe(forbindelse, capsys):
+    kampe.registrer_kamp(forbindelse, "2026-11-23", "Vejle B", "hjemme", "2-1")
+    kampe.registrer_kamp(forbindelse, "2026-12-01", "AGF", "ude", "1-3")
+
+    cli.vis_kampe(forbindelse)
+
+    ud = capsys.readouterr().out
+    vejle = [l for l in ud.splitlines() if "Vejle B" in l][0]
+    agf = [l for l in ud.splitlines() if "AGF" in l][0]
+    assert "2026-11-23" in vejle and "hjemme" in vejle and "2-1" in vejle
+    assert "2026-12-01" in agf and "ude" in agf and "1-3" in agf
+
+
+def test_kamp_liste_via_cli(forbindelse, capsys):
+    kampe.registrer_kamp(forbindelse, "2026-11-23", "Vejle B", "hjemme", "2-1")
+
+    kode = cli.main(["kamp", "liste"], forbindelse=forbindelse)
+
+    assert kode == 0
+    assert "Vejle B" in capsys.readouterr().out
