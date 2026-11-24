@@ -37,7 +37,9 @@ def byg_parser():
         choices=kampe.SPILLESTEDER,
         help="Hjemme- eller udekamp",
     )
-    registrer.add_argument("--resultat", required=True, help="Resultat, fx 2-1")
+    registrer.add_argument(
+        "--resultat", required=True, help="Resultat som vores mål-deres mål, fx 2-1"
+    )
 
     kamp_handlinger.add_parser("liste", help="Vis alle kampe")
     return parser
@@ -60,7 +62,8 @@ def formater_kampe(liste):
     linjer = [f"{'Dato':<10}  {'Modstander':<25} {'Sted':<6} Resultat"]
     for k in liste:
         linjer.append(
-            f"{k['dato']:<10}  {k['modstander']:<25} {k['spillested']:<6} {k['resultat']}"
+            f"{k['dato']:<10}  {k['modstander']:<25} {k['spillested']:<6} "
+            f"{kampe.formater_resultat(k)}"
         )
     return "\n".join(linjer)
 
