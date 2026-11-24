@@ -71,8 +71,36 @@ def test_registrer_kamp_via_cli(forbindelse, capsys):
     assert "Vejle B" in capsys.readouterr().out
     assert kampe.hent_kampe(forbindelse) == [
         {"id": 1, "dato": "2026-11-23", "modstander": "Vejle B",
-         "spillested": "hjemme", "resultat": "2-1"}
+         "spillested": "hjemme", "vores_maal": 2, "deres_maal": 1}
     ]
+
+
+@pytest.mark.parametrize("resultat", ["abc", "2:1"])
+def test_registrer_kamp_via_cli_afviser_ugyldigt_resultat(
+    forbindelse, capsys, resultat
+):
+    kode = cli.main(
+        ["kamp", "registrer", "--dato", "2026-11-23", "--modstander", "AGF",
+         "--spillested", "ude", "--resultat", resultat],
+        forbindelse=forbindelse,
+    )
+
+    assert kode == 1
+    assert "Fejl" in capsys.readouterr().out
+    assert kampe.hent_kampe(forbindelse) == []
+
+
+def test_registrer_samme_kamp_via_cli_to_gange_afvises(forbindelse, capsys):
+    argv = ["kamp", "registrer", "--dato", "2026-11-23", "--modstander", "AGF",
+            "--spillested", "ude", "--resultat", "1-1"]
+    assert cli.main(argv, forbindelse=forbindelse) == 0
+    capsys.readouterr()
+
+    kode = cli.main(argv, forbindelse=forbindelse)
+
+    assert kode == 1
+    assert "allerede registreret" in capsys.readouterr().out
+    assert len(kampe.hent_kampe(forbindelse)) == 1
 
 
 def test_registrer_kamp_via_cli_afviser_ugyldigt_spillested(forbindelse):
@@ -121,4 +149,5 @@ def test_kamp_liste_via_cli(forbindelse, capsys):
     kode = cli.main(["kamp", "liste"], forbindelse=forbindelse)
 
     assert kode == 0
-    assert "Vejle B" in capsys.readouterr().out
+    linje = [l for l in capsys.readouterr().out.splitlines() if "Vejle B" in l][0]
+    assert linje.rstrip().endswith("2-1")
